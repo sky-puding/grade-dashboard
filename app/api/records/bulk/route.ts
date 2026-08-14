@@ -5,6 +5,17 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ScoreRecord } from "@/lib/types";
 
+// records.length가 크면(수백~수천 줄) DB 왕복을 한 줄씩 순서대로 하지 않고
+// 이 정도 단위로 묶어서 동시에 실행한다 (커넥션 풀을 넘치게 하지 않을 정도로).
+const BATCH_SIZE = 20;
+
+async function runInBatches<T>(items: T[], batchSize: number, task: (item: T) => Promise<void>) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(task));
+  }
+}
+
 // 엑셀에서 파싱된 성적 데이터를 DB에 반영한다. (관리자 전용)
 // mode: "replace" - 기존 성적 데이터를 전부 지우고 새로 넣음
 //       "append"  - 겹치는 (학생/시험종류/회차/과목) 조합만 덮어쓰고, 나머지는 새로 추가
@@ -45,24 +56,27 @@ export async function POST(req: Request) {
   }
 
   // 같은 학생이 여러 행에 걸쳐 등장하므로, 학생은 한 번씩만 upsert 한다.
+  // (학생 수만큼만 있으면 되니 배치로 동시 처리)
   const studentIdByCode = new Map<string, string>();
   const uniqueStudents = new Map<string, ScoreRecord>();
   for (const r of records) {
     if (!uniqueStudents.has(r.Student_ID)) uniqueStudents.set(r.Student_ID, r);
   }
-  for (const r of uniqueStudents.values()) {
+
+  await runInBatches(Array.from(uniqueStudents.values()), BATCH_SIZE, async (r) => {
     const student = await prisma.student.upsert({
       where: { studentCode: r.Student_ID },
       update: { grade: r.Grade, classNo: r.Class, name: r.Name },
       create: { studentCode: r.Student_ID, grade: r.Grade, classNo: r.Class, name: r.Name },
     });
     studentIdByCode.set(r.Student_ID, student.id);
-  }
+  });
 
+  // 성적 행은 수백~수천 줄일 수 있으므로 배치로 동시 upsert
   let count = 0;
-  for (const r of records) {
+  await runInBatches(records, BATCH_SIZE, async (r) => {
     const studentId = studentIdByCode.get(r.Student_ID);
-    if (!studentId) continue;
+    if (!studentId) return;
 
     const examCategory = r.Exam_Category === "내신" ? ExamCategory.SCHOOL : ExamCategory.MOCK;
     const data = {
@@ -95,7 +109,7 @@ export async function POST(req: Request) {
       },
     });
     count++;
-  }
+  });
 
   return NextResponse.json({ count });
 }

@@ -7,7 +7,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // 기본 커넥션 풀(max: 10)로는 대량 업로드 시 동시 처리량이 제한되어
+  // 풀 크기를 넉넉하게 늘려준다 (Neon 무료 티어로도 충분히 감당 가능한 수준).
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 20 });
   return new PrismaClient({ adapter });
 }
 
