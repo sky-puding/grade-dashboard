@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum ExamCategory {
+  SCHOOL // 내신
+  MOCK // 모의고사
+}
+
+model Account {
+  id              String   @id @default(cuid())
+  username        String   @unique
+  passwordHash    String
+  name            String
+  role            Role     @default(USER)
+  linkedStudentId String?
+  linkedStudent   Student? @relation(fields: [linkedStudentId], references: [id])
+  createdAt       DateTime @default(now())
+}
+
+model Student {
+  id          String        @id @default(cuid())
+  studentCode String        @unique // 기존 Student_ID (예: "10203")
+  grade       Int
+  classNo     Int
+  name        String
+  records     ScoreRecord[]
+  accounts    Account[]
+}
+
+model ScoreRecord {
+  id            String       @id @default(cuid())
+  student       Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String
+  examCategory  ExamCategory
+  examPeriod    String // "중간"/"기말"/"학기말" 또는 "3월"/"6월"/"9월"/"10월"
+  subject       String
+  score         Float
+  rankInfo      String?
+  gradeLevel    Int?
+  percentile    Float?
+  standardScore Float?
+  schoolYear    Int?
+  totalScore    Float?
+  scoreAverage  Float?
+  createdAt     DateTime     @default(now())
+
+  @@unique([studentId, examCategory, examPeriod, subject])
+}
