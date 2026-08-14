@@ -123,12 +123,10 @@ export function LoginDialog({
             <Input
               id="admin-password"
               type="password"
-              placeholder="admin123"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
-            <p className="text-xs text-muted-foreground">데모 비밀번호: admin123</p>
           </div>
         )}
 
@@ -137,7 +135,6 @@ export function LoginDialog({
             <Label htmlFor="user-id">아이디</Label>
             <Input
               id="user-id"
-              placeholder="student1"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -146,14 +143,12 @@ export function LoginDialog({
             <Input
               id="user-password"
               type="password"
-              placeholder="1234"
               value={userPassword}
               onChange={(e) => setUserPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
             <p className="text-xs text-muted-foreground">
-              데모 계정: student1/1234 (연결 학생 전용) · viewer/1234 (전체 조회). 계정은
-              관리자가 &ldquo;사용자 관리&rdquo;에서 추가·삭제할 수 있습니다.
+              계정 정보는 관리자에게 문의해주세요.
             </p>
           </div>
         )}
