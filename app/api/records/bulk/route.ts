@@ -24,6 +24,24 @@ export async function POST(req: Request) {
 
   if (mode === "replace") {
     await prisma.scoreRecord.deleteMany({});
+
+    // 새로 업로드된 명단에 없는 예전 학생은 완전히 삭제한다.
+    // 그 학생을 조회 범위로 연결해둔 계정이 있다면, 삭제 전에 먼저 연결을 해제해서
+    // FK 제약(외래키)에 걸리지 않도록 한다.
+    const newStudentCodes = Array.from(new Set(records.map((r) => r.Student_ID)));
+    const staleStudents = await prisma.student.findMany({
+      where: { studentCode: { notIn: newStudentCodes } },
+      select: { id: true },
+    });
+
+    if (staleStudents.length > 0) {
+      const staleIds = staleStudents.map((s) => s.id);
+      await prisma.account.updateMany({
+        where: { linkedStudentId: { in: staleIds } },
+        data: { linkedStudentId: null },
+      });
+      await prisma.student.deleteMany({ where: { id: { in: staleIds } } });
+    }
   }
 
   // 같은 학생이 여러 행에 걸쳐 등장하므로, 학생은 한 번씩만 upsert 한다.
