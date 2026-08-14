@@ -82,13 +82,13 @@ export function Header({
 
             {role === "admin" && (
               <Badge variant="admin" className="gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> 관리자(교사) 로그인됨
+                <ShieldCheck className="h-3.5 w-3.5" /> 관리자 로그인됨
               </Badge>
             )}
             {role === "user" && (
               <Badge variant="secondary" className="gap-1">
                 <Users className="h-3.5 w-3.5" />
-                {session?.user?.name ?? "일반 사용자"} 로그인됨 ·{" "}
+                {session?.user?.name ?? "교사"} 로그인됨 ·{" "}
                 {isLinkedUser ? "연결 학생 전용 조회" : "전체 조회 전용 모드"}
               </Badge>
             )}

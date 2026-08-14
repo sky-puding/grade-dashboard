@@ -97,7 +97,7 @@ export function LoginDialog({
             )}
           >
             <ShieldCheck className="h-6 w-6" />
-            <span className="font-medium">관리자(교사)</span>
+            <span className="font-medium">관리자</span>
           </button>
           <button
             type="button"
@@ -113,7 +113,7 @@ export function LoginDialog({
             )}
           >
             <Users className="h-6 w-6" />
-            <span className="font-medium">일반 사용자(학생/학부모)</span>
+            <span className="font-medium">교사</span>
           </button>
         </div>
 

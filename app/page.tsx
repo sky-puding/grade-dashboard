@@ -77,7 +77,7 @@ export default function Home() {
             <div>
               <h2 className="text-lg font-semibold">로그인이 필요합니다</h2>
               <p className="text-sm text-muted-foreground">
-                관리자(교사) 또는 일반 사용자(학생/학부모)로 로그인 후 대시보드를 확인할 수 있습니다.
+                관리자 또는 교사로 로그인 후 대시보드를 확인할 수 있습니다.
               </p>
             </div>
             <Button onClick={() => setLoginOpen(true)} className="gap-1.5">
