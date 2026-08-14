@@ -12,6 +12,9 @@ interface DataState {
     records: ScoreRecord[],
     mode: "replace" | "append"
   ) => Promise<{ success: boolean; message?: string }>;
+  clearCategory: (
+    category: "내신" | "모의고사"
+  ) => Promise<{ success: boolean; message?: string }>;
 }
 
 const DataContext = createContext<DataState | undefined>(undefined);
@@ -55,8 +58,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  const clearCategory: DataState["clearCategory"] = async (category) => {
+    const res = await fetch("/api/records/clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { success: false, message: body.error ?? "삭제에 실패했습니다." };
+    }
+    await refresh();
+    return { success: true };
+  };
+
   return (
-    <DataContext.Provider value={{ records, isLoading, refresh, uploadRecords }}>
+    <DataContext.Provider value={{ records, isLoading, refresh, uploadRecords, clearCategory }}>
       {children}
     </DataContext.Provider>
   );

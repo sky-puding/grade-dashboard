@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Download, UploadCloud } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Trash2, UploadCloud } from "lucide-react";
 
 import { useScoreData } from "@/lib/data-context";
 import {
@@ -50,8 +50,11 @@ export function UploadDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { uploadRecords } = useScoreData();
+  const { uploadRecords, clearCategory } = useScoreData();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [clearingCategory, setClearingCategory] = useState<"내신" | "모의고사" | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const [clearResult, setClearResult] = useState<string | null>(null);
   const [formatMode, setFormatMode] = useState<FormatMode>("standard");
   const [examPeriod, setExamPeriod] = useState<string>("");
   const [schoolGrade, setSchoolGrade] = useState<string>("");
@@ -122,6 +125,22 @@ export function UploadDialog({
     }
     resetAll();
     onOpenChange(false);
+  };
+
+  const handleClear = async (category: "내신" | "모의고사") => {
+    if (!window.confirm(`${category} 데이터를 전부 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+    setClearingCategory(category);
+    setClearError(null);
+    setClearResult(null);
+    const result = await clearCategory(category);
+    setClearingCategory(null);
+    if (!result.success) {
+      setClearError(result.message ?? "삭제에 실패했습니다.");
+      return;
+    }
+    setClearResult(`${category} 데이터를 모두 삭제했습니다.`);
   };
 
   const downloadCurrentTemplate = () => {
@@ -342,6 +361,39 @@ export function UploadDialog({
             {isApplying ? "반영 중..." : "대시보드에 반영"}
           </Button>
         </DialogFooter>
+
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-destructive">
+            <Trash2 className="h-4 w-4" />
+            위험 구역
+          </p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            업로드 없이, 지금 저장된 성적 데이터를 종류별로 통째로 지웁니다. 되돌릴 수
+            없으니 신중하게 사용하세요.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={clearingCategory !== null}
+              onClick={() => handleClear("모의고사")}
+            >
+              {clearingCategory === "모의고사" ? "삭제 중..." : "모의고사 데이터 전체 삭제"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={clearingCategory !== null}
+              onClick={() => handleClear("내신")}
+            >
+              {clearingCategory === "내신" ? "삭제 중..." : "내신 데이터 전체 삭제"}
+            </Button>
+          </div>
+          {clearError && <p className="mt-2 text-xs text-destructive">{clearError}</p>}
+          {clearResult && <p className="mt-2 text-xs text-emerald-600">{clearResult}</p>}
+        </div>
       </DialogContent>
     </Dialog>
   );
