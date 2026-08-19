@@ -1,4 +1,5 @@
 import { ScoreRecord, StudentInfo } from "./types";
+import { SCHOOL_PERIOD_ORDER } from "./grade-utils";
 
 // 서버/클라이언트 렌더링 결과가 항상 동일하도록 Math.random 대신
 // 시드 고정 의사난수 생성기를 사용합니다 (하이드레이션 불일치 방지).
@@ -24,7 +25,7 @@ const NAMES = [
 ];
 
 const SUBJECTS = ["국어", "수학", "영어", "과학"];
-const SCHOOL_PERIODS = ["1학기 중간", "1학기 기말", "2학기 중간", "2학기 기말"] as const;
+const SCHOOL_PERIODS = SCHOOL_PERIOD_ORDER;
 const MOCK_PERIODS = ["3월", "6월", "9월", "10월"] as const;
 
 // 모의고사 성적표(수능형) 탐구영역 과목 후보 (학생마다 2과목 선택)

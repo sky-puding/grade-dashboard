@@ -13,7 +13,7 @@ import {
   parseWorkbookFile,
 } from "@/lib/excel";
 import { ScoreRecord } from "@/lib/types";
-import { MOCK_PERIOD_ORDER, SCHOOL_ROUNDS, SCHOOL_SEMESTERS } from "@/lib/grade-utils";
+import { MOCK_PERIOD_ORDER, SCHOOL_ROUNDS, SCHOOL_SEMESTERS, formatSchoolPeriod } from "@/lib/grade-utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -104,7 +104,7 @@ export function UploadDialog({
       if (formatMode === "mockExam") {
         result = await parseMockExamWorkbook(file, examPeriod);
       } else if (formatMode === "schoolExam") {
-        const schoolExamPeriod = `${schoolSemester} ${schoolRound}`;
+        const schoolExamPeriod = formatSchoolPeriod(schoolSemester, schoolRound);
         result = await parseSchoolExamWorkbook(file, Number(schoolGrade), schoolExamPeriod);
       } else {
         result = await parseWorkbookFile(file);
