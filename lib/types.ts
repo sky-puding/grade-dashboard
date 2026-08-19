@@ -1,7 +1,10 @@
 // 엑셀/CSV 표준 열 이름과 1:1로 대응되는 성적 원시 레코드 타입
 export type ExamCategory = "내신" | "모의고사";
 
-export type SchoolExamPeriod = "중간" | "기말" | "학기말";
+export type SchoolSemester = "1학기" | "2학기";
+export type SchoolExamRound = "중간" | "기말";
+// 실제 저장되는 Exam_Period 값은 "1학기 중간"처럼 학기+회차를 합친 문자열이다.
+export type SchoolExamPeriod = `${SchoolSemester} ${SchoolExamRound}`;
 export type MockExamPeriod = "3월" | "6월" | "9월" | "10월";
 
 export interface ScoreRecord {
@@ -10,7 +13,7 @@ export interface ScoreRecord {
   Student_ID: string; // 학번
   Name: string; // 이름
   Exam_Category: ExamCategory; // 내신 / 모의고사
-  Exam_Period: string; // 중간/기말/학기말 또는 3월/6월/9월/10월
+  Exam_Period: string; // "1학기 중간"/"1학기 기말"/"2학기 중간"/"2학기 기말" 또는 3월/6월/9월/10월
   Subject: string; // 과목명
   Score: number; // 원점수
   Rank_Info?: string; // 석차 (내신 전용, 예: "12/300")

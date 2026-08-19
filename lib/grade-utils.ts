@@ -1,6 +1,11 @@
 import { PerformanceTag, ScoreRecord, StudentInfo } from "./types";
 
-export const SCHOOL_PERIOD_ORDER = ["중간", "기말", "학기말"];
+export const SCHOOL_SEMESTERS = ["1학기", "2학기"];
+export const SCHOOL_ROUNDS = ["중간", "기말"];
+// 내신 회차는 "학기 + 회차"를 합친 문자열로 관리한다. 예: "1학기 중간", "2학기 기말"
+export const SCHOOL_PERIOD_ORDER = SCHOOL_SEMESTERS.flatMap((sem) =>
+  SCHOOL_ROUNDS.map((round) => `${sem} ${round}`)
+);
 export const MOCK_PERIOD_ORDER = ["3월", "6월", "9월", "10월"];
 
 export function getUniqueStudents(records: ScoreRecord[]): StudentInfo[] {

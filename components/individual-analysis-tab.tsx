@@ -196,7 +196,7 @@ export function IndividualAnalysisTab({
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">내신 성적 추이 (중간 → 기말 → 학기말)</CardTitle>
+            <CardTitle className="text-base">내신 성적 추이 (1학기 중간 → 1학기 기말 → 2학기 중간 → 2학기 기말)</CardTitle>
           </CardHeader>
           <CardContent>
             <TrendChart data={schoolTrend} category="내신" />

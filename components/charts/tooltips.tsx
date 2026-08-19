@@ -27,7 +27,7 @@ export function TrendTooltip({
   return (
     <div className="min-w-[220px] rounded-lg border bg-popover p-3 text-xs shadow-lg">
       <p className="mb-2 text-sm font-semibold">
-        {category === "내신" ? `내신 · ${label} 고사` : `모의고사 · ${label} 모의고사`}
+        {category === "내신" ? `내신 · ${label}고사` : `모의고사 · ${label} 모의고사`}
       </p>
       <div className="space-y-2">
         {payload.map((entry) => {

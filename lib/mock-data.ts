@@ -24,7 +24,7 @@ const NAMES = [
 ];
 
 const SUBJECTS = ["국어", "수학", "영어", "과학"];
-const SCHOOL_PERIODS = ["중간", "기말", "학기말"] as const;
+const SCHOOL_PERIODS = ["1학기 중간", "1학기 기말", "2학기 중간", "2학기 기말"] as const;
 const MOCK_PERIODS = ["3월", "6월", "9월", "10월"] as const;
 
 // 모의고사 성적표(수능형) 탐구영역 과목 후보 (학생마다 2과목 선택)

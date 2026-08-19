@@ -13,7 +13,7 @@ import {
   parseWorkbookFile,
 } from "@/lib/excel";
 import { ScoreRecord } from "@/lib/types";
-import { MOCK_PERIOD_ORDER, SCHOOL_PERIOD_ORDER } from "@/lib/grade-utils";
+import { MOCK_PERIOD_ORDER, SCHOOL_ROUNDS, SCHOOL_SEMESTERS } from "@/lib/grade-utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,6 +58,8 @@ export function UploadDialog({
   const [formatMode, setFormatMode] = useState<FormatMode>("standard");
   const [examPeriod, setExamPeriod] = useState<string>("");
   const [schoolGrade, setSchoolGrade] = useState<string>("");
+  const [schoolSemester, setSchoolSemester] = useState<string>("");
+  const [schoolRound, setSchoolRound] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ScoreRecord[] | null>(null);
@@ -77,6 +79,8 @@ export function UploadDialog({
     setFormatMode("standard");
     setExamPeriod("");
     setSchoolGrade("");
+    setSchoolSemester("");
+    setSchoolRound("");
   };
 
   const handleFile = async (file: File) => {
@@ -89,8 +93,8 @@ export function UploadDialog({
       setErrors(["먼저 회차(3월/6월/9월/10월)를 선택해주세요."]);
       return;
     }
-    if (formatMode === "schoolExam" && (!schoolGrade || !examPeriod)) {
-      setErrors(["먼저 학년과 회차(중간/기말/학기말)를 선택해주세요."]);
+    if (formatMode === "schoolExam" && (!schoolGrade || !schoolSemester || !schoolRound)) {
+      setErrors(["먼저 학년, 학기, 회차를 모두 선택해주세요."]);
       return;
     }
     setIsParsing(true);
@@ -100,7 +104,8 @@ export function UploadDialog({
       if (formatMode === "mockExam") {
         result = await parseMockExamWorkbook(file, examPeriod);
       } else if (formatMode === "schoolExam") {
-        result = await parseSchoolExamWorkbook(file, Number(schoolGrade), examPeriod);
+        const schoolExamPeriod = `${schoolSemester} ${schoolRound}`;
+        result = await parseSchoolExamWorkbook(file, Number(schoolGrade), schoolExamPeriod);
       } else {
         result = await parseWorkbookFile(file);
       }
@@ -233,7 +238,7 @@ export function UploadDialog({
                 resetFileState();
               }}
             >
-              <SelectTrigger className="w-28">
+              <SelectTrigger className="w-24">
                 <SelectValue placeholder="학년" />
               </SelectTrigger>
               <SelectContent>
@@ -245,29 +250,49 @@ export function UploadDialog({
               </SelectContent>
             </Select>
 
-            <span className="text-sm font-medium">회차</span>
+            <span className="text-sm font-medium">학기</span>
             <Select
-              value={examPeriod || undefined}
+              value={schoolSemester || undefined}
               onValueChange={(v) => {
-                setExamPeriod(v);
+                setSchoolSemester(v);
                 resetFileState();
               }}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-24">
+                <SelectValue placeholder="학기" />
+              </SelectTrigger>
+              <SelectContent>
+                {SCHOOL_SEMESTERS.map((sem) => (
+                  <SelectItem key={sem} value={sem}>
+                    {sem}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <span className="text-sm font-medium">회차</span>
+            <Select
+              value={schoolRound || undefined}
+              onValueChange={(v) => {
+                setSchoolRound(v);
+                resetFileState();
+              }}
+            >
+              <SelectTrigger className="w-28">
                 <SelectValue placeholder="회차 선택" />
               </SelectTrigger>
               <SelectContent>
-                {SCHOOL_PERIOD_ORDER.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}고사
+                {SCHOOL_ROUNDS.map((round) => (
+                  <SelectItem key={round} value={round}>
+                    {round}고사
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <span className="w-full text-xs text-muted-foreground">
-              파일 안에 학년/회차/석차/등급 정보가 없어 학년·회차는 직접 선택하고, 등급은
-              업로드된 과목별 원점수 석차를 기준으로 자동 계산합니다 (상위 10%=1등급 …
-              90% 초과=5등급).
+              파일 안에 학년/학기/회차/석차/등급 정보가 없어 이 세 가지는 직접 선택하고,
+              등급은 업로드된 과목별 원점수 석차를 기준으로 자동 계산합니다 (상위
+              10%=1등급 … 90% 초과=5등급).
             </span>
           </div>
         )}

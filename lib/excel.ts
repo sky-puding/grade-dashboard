@@ -118,7 +118,7 @@ export function downloadSampleTemplate() {
       Student_ID: "10203",
       Name: "홍길동",
       Exam_Category: "내신",
-      Exam_Period: "중간",
+      Exam_Period: "1학기 중간",
       Subject: "수학",
       Score: 88,
       Rank_Info: "5/300",
@@ -311,8 +311,8 @@ export function downloadMockExamSampleTemplate() {
 
 // ── 내신 성적표(학교자체형) wide 포맷 ──────────────────────────────
 // 학생 1명 = 1행, "과목명(단위수)" 형태의 헤더로 과목이 옆으로 나열되는 학교 자체 출력 양식.
-// 학년/회차(중간·기말·학기말) 정보와 석차·등급 컬럼이 파일 안에 없으므로,
-// 업로드 시 학년·회차를 별도로 입력받고, 등급은 업로드된 과목별 원점수 석차를 기준으로 계산한다.
+// 학년/학기/회차(중간·기말) 정보와 석차·등급 컬럼이 파일 안에 없으므로,
+// 업로드 시 학년·학기·회차를 별도로 입력받고, 등급은 업로드된 과목별 원점수 석차를 기준으로 계산한다.
 // (상위 10%=1등급, ~34%=2등급, ~66%=3등급, ~90%=4등급, 그 이하=5등급 / 동점자는 동석차 처리)
 
 function computeRankAndGrade(scores: number[]): { rank: number; grade: number }[] {
