@@ -75,12 +75,28 @@ export function getLatestBySubject(
   return bySubject;
 }
 
-export function averageGradeLevel(records: ScoreRecord[], category: "내신" | "모의고사") {
-  const latest = Array.from(getLatestBySubject(records, category).values());
+// subject를 지정하면 그 과목 하나의 등급만, 지정하지 않으면 전 과목 평균 등급을 반환한다.
+export function averageGradeLevel(
+  records: ScoreRecord[],
+  category: "내신" | "모의고사",
+  subject?: string
+) {
+  const bySubject = getLatestBySubject(records, category);
+  const latest = subject
+    ? bySubject.has(subject)
+      ? [bySubject.get(subject)!]
+      : []
+    : Array.from(bySubject.values());
   const withGrade = latest.filter((r) => typeof r.Grade_Level === "number");
   if (withGrade.length === 0) return null;
   const sum = withGrade.reduce((acc, r) => acc + (r.Grade_Level ?? 0), 0);
   return Math.round((sum / withGrade.length) * 10) / 10;
+}
+
+// records에 등장하는 과목 목록 (category를 지정하면 그 시험 종류로만 좁힌다)
+export function getUniqueSubjects(records: ScoreRecord[], category?: "내신" | "모의고사") {
+  const filtered = category ? records.filter((r) => r.Exam_Category === category) : records;
+  return Array.from(new Set(filtered.map((r) => r.Subject))).sort((a, b) => a.localeCompare(b, "ko"));
 }
 
 export function computePerformanceTag(
@@ -177,12 +193,13 @@ export interface StudentSummary {
   tag: PerformanceTag;
 }
 
-export function computeStudentSummaries(records: ScoreRecord[]): StudentSummary[] {
+// subject를 지정하면 그 과목만 기준으로, 지정하지 않으면 전 과목 평균으로 계산한다.
+export function computeStudentSummaries(records: ScoreRecord[], subject?: string): StudentSummary[] {
   const students = getUniqueStudents(records);
   return students.map((student) => {
     const studentRecords = getStudentRecords(records, student.Student_ID);
-    const schoolAvgGrade = averageGradeLevel(studentRecords, "내신");
-    const mockAvgGrade = averageGradeLevel(studentRecords, "모의고사");
+    const schoolAvgGrade = averageGradeLevel(studentRecords, "내신", subject);
+    const mockAvgGrade = averageGradeLevel(studentRecords, "모의고사", subject);
     return {
       student,
       schoolAvgGrade,

@@ -10,11 +10,19 @@ import {
   bucketForGrade,
   computeDistribution,
   computeStudentSummaries,
+  getUniqueSubjects,
 } from "@/lib/grade-utils";
 import { exportRowsToExcel } from "@/lib/excel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -50,10 +58,18 @@ function sortValue(summary: StudentSummary, key: SortKey) {
 
 export function GroupAnalysisTab({ records }: { records: ScoreRecord[] }) {
   const [criterion, setCriterion] = useState<"내신" | "모의고사">("내신");
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("grade");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const summaries = useMemo(() => computeStudentSummaries(records), [records]);
+  const subjects = useMemo(() => getUniqueSubjects(records), [records]);
+  const subjectFilter = selectedSubject === "all" ? undefined : selectedSubject;
+  const subjectLabel = selectedSubject === "all" ? "전체 과목" : selectedSubject;
+
+  const summaries = useMemo(
+    () => computeStudentSummaries(records, subjectFilter),
+    [records, subjectFilter]
+  );
   const distribution = useMemo(
     () => computeDistribution(summaries, criterion),
     [summaries, criterion]
@@ -104,8 +120,9 @@ export function GroupAnalysisTab({ records }: { records: ScoreRecord[] }) {
       반: s.student.Class,
       학번: s.student.Student_ID,
       이름: s.student.Name,
-      내신_평균등급: s.schoolAvgGrade ?? "",
-      모의고사_평균등급: s.mockAvgGrade ?? "",
+      과목: subjectLabel,
+      [`내신_${selectedSubject === "all" ? "평균등급" : "등급"}`]: s.schoolAvgGrade ?? "",
+      [`모의고사_${selectedSubject === "all" ? "평균등급" : "등급"}`]: s.mockAvgGrade ?? "",
       유형: s.tag,
     }));
     exportRowsToExcel(rows, "학급_그룹_성적_요약.xlsx", "그룹분석");
@@ -121,28 +138,52 @@ export function GroupAnalysisTab({ records }: { records: ScoreRecord[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">기준</span>
-        <div className="inline-flex rounded-lg bg-muted p-1">
-          {(["내신", "모의고사"] as const).map((c) => (
-            <button
-              key={c}
-              onClick={() => setCriterion(c)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                criterion === c ? "bg-background shadow" : "text-muted-foreground"
-              )}
-            >
-              {c} 기준 보기
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">기준</span>
+          <div className="inline-flex rounded-lg bg-muted p-1">
+            {(["내신", "모의고사"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCriterion(c)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  criterion === c ? "bg-background shadow" : "text-muted-foreground"
+                )}
+              >
+                {c} 기준 보기
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">과목</span>
+          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 과목</SelectItem>
+              {subjects.map((subject) => (
+                <SelectItem key={subject} value={subject}>
+                  {subject}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">{criterion} 기준 성적 분포도</CardTitle>
+            <CardTitle className="text-base">
+              {criterion} 기준 성적 분포도{" "}
+              {selectedSubject !== "all" && (
+                <span className="font-normal text-muted-foreground">· {subjectLabel}</span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <DistributionChart data={distribution} />
@@ -198,12 +239,14 @@ export function GroupAnalysisTab({ records }: { records: ScoreRecord[] }) {
                 <TableHead>학번</TableHead>
                 <TableHead className="text-right">
                   <button className="ml-auto flex items-center gap-1" onClick={() => toggleSort("school")}>
-                    내신 평균등급 <SortIcon column="school" />
+                    내신 {selectedSubject === "all" ? "평균등급" : `등급(${subjectLabel})`}{" "}
+                    <SortIcon column="school" />
                   </button>
                 </TableHead>
                 <TableHead className="text-right">
                   <button className="ml-auto flex items-center gap-1" onClick={() => toggleSort("mock")}>
-                    모의고사 평균등급 <SortIcon column="mock" />
+                    모의고사 {selectedSubject === "all" ? "평균등급" : `등급(${subjectLabel})`}{" "}
+                    <SortIcon column="mock" />
                   </button>
                 </TableHead>
                 <TableHead>유형</TableHead>
