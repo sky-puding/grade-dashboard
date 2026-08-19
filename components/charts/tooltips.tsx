@@ -68,34 +68,54 @@ export function TrendTooltip({
 }
 
 // 레이더차트(내신 vs 모의고사 과목 비교) 커스텀 툴팁
+// 그래프에 그려지는 값은 "만점 대비 백분율"이다 (모의고사 한국사/탐구는 50점 만점,
+// 나머지는 100점 만점이라 원점수를 그대로 비교하면 불공평하기 때문). 툴팁에는
+// 원점수/만점과 백분율을 같이 보여준다.
 export function RadarTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
-  const point = payload[0].payload as { subject: string; schoolDetail?: string; mockDetail?: string };
+  const point = payload[0].payload as {
+    subject: string;
+    schoolDetail?: string;
+    schoolRawScore?: number;
+    schoolMaxScore?: number;
+    mockDetail?: string;
+    mockRawScore?: number;
+    mockMaxScore?: number;
+  };
   const subject = point.subject;
-  const school = payload.find((p) => p.name === "내신")?.value ?? 0;
-  const mock = payload.find((p) => p.name === "모의고사")?.value ?? 0;
-  const diff = school - mock;
+  const schoolPercent = payload.find((p) => p.name === "내신")?.value ?? 0;
+  const mockPercent = payload.find((p) => p.name === "모의고사")?.value ?? 0;
+  const diff = Math.round((schoolPercent - mockPercent) * 10) / 10;
 
   return (
-    <div className="min-w-[180px] rounded-lg border bg-popover p-3 text-xs shadow-lg">
+    <div className="min-w-[200px] rounded-lg border bg-popover p-3 text-xs shadow-lg">
       <p className="mb-2 text-sm font-semibold">{subject}</p>
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground">
-          내신 원점수{point.schoolDetail && point.schoolDetail !== subject ? ` (${point.schoolDetail})` : ""}
+          내신{point.schoolDetail && point.schoolDetail !== subject ? ` (${point.schoolDetail})` : ""}
         </span>
-        <span className="font-semibold">{school}점</span>
+        <span className="font-semibold">
+          {point.schoolRawScore ?? "-"}/{point.schoolMaxScore ?? 100}점 ({schoolPercent}%)
+        </span>
       </div>
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground">
-          모의고사 원점수{point.mockDetail && point.mockDetail !== subject ? ` (${point.mockDetail})` : ""}
+          모의고사{point.mockDetail && point.mockDetail !== subject ? ` (${point.mockDetail})` : ""}
         </span>
-        <span className="font-semibold">{mock}점</span>
+        <span className="font-semibold">
+          {point.mockRawScore ?? "-"}/{point.mockMaxScore ?? 100}점 ({mockPercent}%)
+        </span>
       </div>
       <div className="mt-1.5 border-t pt-1.5 text-muted-foreground">
-        {diff === 0 && "두 시험 점수가 동일합니다."}
-        {diff > 0 && `내신이 모의고사보다 ${diff}점 높습니다.`}
-        {diff < 0 && `모의고사가 내신보다 ${-diff}점 높습니다.`}
+        {diff === 0 && "만점 대비 비율이 동일합니다."}
+        {diff > 0 && `내신이 모의고사보다 만점 대비 ${diff}%p 높습니다.`}
+        {diff < 0 && `모의고사가 내신보다 만점 대비 ${-diff}%p 높습니다.`}
       </div>
+      {(point.schoolMaxScore === 50 || point.mockMaxScore === 50) && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          * 모의고사 한국사·탐구는 50점 만점이라 백분율로 환산해 비교했습니다.
+        </p>
+      )}
     </div>
   );
 }

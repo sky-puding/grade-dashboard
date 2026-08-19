@@ -167,11 +167,29 @@ export function computePerformanceTag(
   return "균형형";
 }
 
+// 모의고사 한국사·탐구영역(사회탐구/과학탐구)은 원점수 만점이 50점이고,
+// 나머지 과목(국어/수학/영어 등)과 내신은 100점 만점이 일반적이다.
+// 만점이 다른 채로 원점수를 그대로 비교하면 탐구 과목이 항상 낮아 보이므로,
+// 레이더 차트에서는 "만점 대비 백분율"로 정규화해서 공정하게 비교한다.
+const MOCK_HALF_SCORE_CATEGORIES = new Set(["한국사", "사회탐구", "과학탐구"]);
+
+function maxScoreFor(examCategory: "내신" | "모의고사", subjectCategory: string): number {
+  return examCategory === "모의고사" && MOCK_HALF_SCORE_CATEGORIES.has(subjectCategory) ? 50 : 100;
+}
+
+function toPercent(score: number, maxScore: number): number {
+  return Math.round((score / maxScore) * 1000) / 10;
+}
+
 export interface RadarPoint {
   subject: string; // 과목 카테고리 (예: "수학")
-  내신: number;
-  모의고사: number;
+  내신: number; // 만점 대비 백분율 (0~100)
+  모의고사: number; // 만점 대비 백분율 (0~100)
+  schoolRawScore?: number;
+  schoolMaxScore?: number;
   schoolDetail?: string; // 내신 쪽 실제 세부 과목명
+  mockRawScore?: number;
+  mockMaxScore?: number;
   mockDetail?: string; // 모의고사 쪽 실제 세부 과목명
 }
 
@@ -180,13 +198,23 @@ export function buildRadarData(records: ScoreRecord[]): RadarPoint[] {
   const mock = getLatestBySubject(records, "모의고사");
   // 카테고리 단위로 비교하므로, 내신 "공통수학1"과 모의고사 "수학"도 같은 "수학"으로 매칭된다.
   const subjects = Array.from(school.keys()).filter((subject) => mock.has(subject));
-  return subjects.map((subject) => ({
-    subject,
-    내신: school.get(subject)?.Score ?? 0,
-    모의고사: mock.get(subject)?.Score ?? 0,
-    schoolDetail: school.get(subject)?.Subject,
-    mockDetail: mock.get(subject)?.Subject,
-  }));
+  return subjects.map((subject) => {
+    const schoolRec = school.get(subject);
+    const mockRec = mock.get(subject);
+    const schoolMax = maxScoreFor("내신", subject);
+    const mockMax = maxScoreFor("모의고사", subject);
+    return {
+      subject,
+      내신: schoolRec ? toPercent(schoolRec.Score, schoolMax) : 0,
+      모의고사: mockRec ? toPercent(mockRec.Score, mockMax) : 0,
+      schoolRawScore: schoolRec?.Score,
+      schoolMaxScore: schoolMax,
+      schoolDetail: schoolRec?.Subject,
+      mockRawScore: mockRec?.Score,
+      mockMaxScore: mockMax,
+      mockDetail: mockRec?.Subject,
+    };
+  });
 }
 
 export interface TrendSubjectPoint {
