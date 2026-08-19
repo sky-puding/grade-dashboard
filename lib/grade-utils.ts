@@ -147,6 +147,37 @@ export function averageGradeLevel(
   return Math.round((sum / withGrade.length) * 10) / 10;
 }
 
+// 회차(period)별로 그 회차에 응시한 전 과목(카테고리 기준)의 평균 등급을 각각 계산한다.
+// 모의고사처럼 회차마다 성적 흐름을 따로 보고 싶을 때 쓴다 (내신은 averageGradeLevel로 충분).
+export function averageGradeLevelByPeriod(
+  records: ScoreRecord[],
+  category: "내신" | "모의고사"
+): { period: string; avgGrade: number | null }[] {
+  const order = category === "내신" ? SCHOOL_PERIOD_ORDER : MOCK_PERIOD_ORDER;
+  const filtered = records.filter((r) => r.Exam_Category === category);
+
+  return order
+    .filter((period) => filtered.some((r) => r.Exam_Period === period))
+    .map((period) => {
+      const periodRecords = filtered.filter((r) => r.Exam_Period === period);
+      // 같은 회차 안에서도 카테고리가 겹치면(탐구 두 과목이 둘 다 과학탐구 등) 먼저 평균 낸다.
+      const byCategory = new Map<string, ScoreRecord[]>();
+      for (const r of periodRecords) {
+        const cat = subjectCategoryOf(r.Subject);
+        if (!byCategory.has(cat)) byCategory.set(cat, []);
+        byCategory.get(cat)!.push(r);
+      }
+      const categoryGrades: number[] = [];
+      byCategory.forEach((recs) => {
+        const grades = recs.map((r) => r.Grade_Level).filter((g): g is number => typeof g === "number");
+        if (grades.length > 0) categoryGrades.push(grades.reduce((a, b) => a + b, 0) / grades.length);
+      });
+      if (categoryGrades.length === 0) return { period, avgGrade: null };
+      const avg = Math.round((categoryGrades.reduce((a, b) => a + b, 0) / categoryGrades.length) * 10) / 10;
+      return { period, avgGrade: avg };
+    });
+}
+
 // records에 등장하는 과목 카테고리 목록 (category를 지정하면 그 시험 종류로만 좁힌다)
 export function getUniqueSubjects(records: ScoreRecord[], category?: "내신" | "모의고사") {
   const filtered = category ? records.filter((r) => r.Exam_Category === category) : records;

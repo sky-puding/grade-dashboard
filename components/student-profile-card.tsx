@@ -14,12 +14,12 @@ const TAG_STYLE: Record<PerformanceTag, string> = {
 export function StudentProfileCard({
   student,
   schoolAvgGrade,
-  mockAvgGrade,
+  mockAvgGradeByPeriod,
   tag,
 }: {
   student: StudentInfo;
   schoolAvgGrade: number | null;
-  mockAvgGrade: number | null;
+  mockAvgGradeByPeriod: { period: string; avgGrade: number | null }[];
   tag: PerformanceTag;
 }) {
   return (
@@ -37,7 +37,7 @@ export function StudentProfileCard({
           </p>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-wrap items-center gap-6">
           <div className="text-center">
             <p className="text-xs text-muted-foreground">내신 평균 등급</p>
             <p className="text-2xl font-bold text-blue-600">
@@ -46,11 +46,24 @@ export function StudentProfileCard({
             </p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-muted-foreground">모의고사 평균 등급</p>
-            <p className="text-2xl font-bold text-red-600">
-              {mockAvgGrade ?? "-"}
-              <span className="ml-0.5 text-sm font-medium">등급</span>
-            </p>
+            <p className="text-xs text-muted-foreground">모의고사 평균 등급 (회차별)</p>
+            {mockAvgGradeByPeriod.length === 0 ? (
+              <p className="text-2xl font-bold text-red-600">
+                -<span className="ml-0.5 text-sm font-medium">등급</span>
+              </p>
+            ) : (
+              <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1">
+                {mockAvgGradeByPeriod.map(({ period, avgGrade }) => (
+                  <div key={period} className="text-center">
+                    <p className="text-[10px] text-muted-foreground">{period}</p>
+                    <p className="text-lg font-bold text-red-600">
+                      {avgGrade ?? "-"}
+                      <span className="ml-0.5 text-xs font-medium">등급</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

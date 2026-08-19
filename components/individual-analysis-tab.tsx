@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { ScoreRecord } from "@/lib/types";
 import {
   averageGradeLevel,
+  averageGradeLevelByPeriod,
   buildRadarData,
   buildTrendData,
   computePerformanceTag,
@@ -84,6 +85,10 @@ export function IndividualAnalysisTab({
 
   const schoolAvgGrade = averageGradeLevel(studentRecords, "내신");
   const mockAvgGrade = averageGradeLevel(studentRecords, "모의고사");
+  const mockAvgGradeByPeriod = useMemo(
+    () => averageGradeLevelByPeriod(studentRecords, "모의고사"),
+    [studentRecords]
+  );
   const tag = computePerformanceTag(schoolAvgGrade, mockAvgGrade);
 
   const radarData = useMemo(() => buildRadarData(studentRecords), [studentRecords]);
@@ -179,7 +184,7 @@ export function IndividualAnalysisTab({
         <StudentProfileCard
           student={selectedStudent}
           schoolAvgGrade={schoolAvgGrade}
-          mockAvgGrade={mockAvgGrade}
+          mockAvgGradeByPeriod={mockAvgGradeByPeriod}
           tag={tag}
         />
       )}
