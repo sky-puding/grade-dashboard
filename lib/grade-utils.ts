@@ -1,4 +1,5 @@
 import { PerformanceTag, ScoreRecord, StudentInfo } from "./types";
+import { subjectCategoryOf } from "./subject-categories";
 
 export const SCHOOL_SEMESTERS = ["1학기", "2학기"];
 export const SCHOOL_ROUNDS = ["중간", "기말"];
@@ -59,19 +60,65 @@ function orderIndex(period: string, category: "내신" | "모의고사") {
   return idx === -1 ? order.length : idx;
 }
 
-// 과목별 "가장 최근 회차" 성적만 뽑아내는 헬퍼 (레이더차트, 요약카드용)
+// 같은 (회차, 과목 카테고리)에 세부 과목이 여러 개 겹치면(예: 탐구 두 과목이 둘 다 "과학탐구")
+// 원점수/등급/백분위/표준점수는 평균을 내고, Subject 필드에는 세부 과목명을 모두 이어붙여 남긴다.
+function combineSameCategoryRecords(recs: ScoreRecord[]): ScoreRecord {
+  if (recs.length === 1) return recs[0];
+  const avgOf = (vals: (number | undefined)[]) => {
+    const nums = vals.filter((v): v is number => typeof v === "number");
+    if (nums.length === 0) return undefined;
+    return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
+  };
+  return {
+    ...recs[0],
+    Subject: recs.map((r) => r.Subject).join(" + "),
+    Score: avgOf(recs.map((r) => r.Score)) ?? recs[0].Score,
+    Grade_Level: avgOf(recs.map((r) => r.Grade_Level)),
+    Percentile: avgOf(recs.map((r) => r.Percentile)),
+    Standard_Score: avgOf(recs.map((r) => r.Standard_Score)),
+    Rank_Info: undefined,
+  };
+}
+
+// records를 "과목 카테고리 -> 회차 -> 그 회차의 대표 레코드" 구조로 정리한다.
+// 대표 레코드의 Subject 필드에는 실제 세부 과목명이 그대로 담겨 있어 툴팁에 쓸 수 있다.
+function collapseByCategory(records: ScoreRecord[]): Map<string, Map<string, ScoreRecord>> {
+  const grouped = new Map<string, Map<string, ScoreRecord[]>>();
+  for (const r of records) {
+    const cat = subjectCategoryOf(r.Subject);
+    if (!grouped.has(cat)) grouped.set(cat, new Map());
+    const byPeriod = grouped.get(cat)!;
+    if (!byPeriod.has(r.Exam_Period)) byPeriod.set(r.Exam_Period, []);
+    byPeriod.get(r.Exam_Period)!.push(r);
+  }
+  const result = new Map<string, Map<string, ScoreRecord>>();
+  grouped.forEach((byPeriod, cat) => {
+    const combined = new Map<string, ScoreRecord>();
+    byPeriod.forEach((recs, period) => combined.set(period, combineSameCategoryRecords(recs)));
+    result.set(cat, combined);
+  });
+  return result;
+}
+
+// 과목 카테고리별 "가장 최근 회차" 성적만 뽑아내는 헬퍼 (레이더차트, 요약카드용).
+// 반환되는 Map의 key는 과목 카테고리(예: "수학")이고, value 레코드의 Subject 필드에는
+// 실제 세부 과목명(예: "미적분1")이 남아있다.
 export function getLatestBySubject(
   records: ScoreRecord[],
   category: "내신" | "모의고사"
 ) {
   const filtered = records.filter((r) => r.Exam_Category === category);
+  const byCategory = collapseByCategory(filtered);
   const bySubject = new Map<string, ScoreRecord>();
-  for (const r of filtered) {
-    const existing = bySubject.get(r.Subject);
-    if (!existing || orderIndex(r.Exam_Period, category) >= orderIndex(existing.Exam_Period, category)) {
-      bySubject.set(r.Subject, r);
-    }
-  }
+  byCategory.forEach((byPeriod, cat) => {
+    let best: ScoreRecord | null = null;
+    byPeriod.forEach((rec, period) => {
+      if (!best || orderIndex(period, category) >= orderIndex(best.Exam_Period, category)) {
+        best = rec;
+      }
+    });
+    if (best) bySubject.set(cat, best);
+  });
   return bySubject;
 }
 
@@ -93,10 +140,12 @@ export function averageGradeLevel(
   return Math.round((sum / withGrade.length) * 10) / 10;
 }
 
-// records에 등장하는 과목 목록 (category를 지정하면 그 시험 종류로만 좁힌다)
+// records에 등장하는 과목 카테고리 목록 (category를 지정하면 그 시험 종류로만 좁힌다)
 export function getUniqueSubjects(records: ScoreRecord[], category?: "내신" | "모의고사") {
   const filtered = category ? records.filter((r) => r.Exam_Category === category) : records;
-  return Array.from(new Set(filtered.map((r) => r.Subject))).sort((a, b) => a.localeCompare(b, "ko"));
+  return Array.from(new Set(filtered.map((r) => subjectCategoryOf(r.Subject)))).sort((a, b) =>
+    a.localeCompare(b, "ko")
+  );
 }
 
 export function computePerformanceTag(
@@ -112,21 +161,24 @@ export function computePerformanceTag(
 }
 
 export interface RadarPoint {
-  subject: string;
+  subject: string; // 과목 카테고리 (예: "수학")
   내신: number;
   모의고사: number;
+  schoolDetail?: string; // 내신 쪽 실제 세부 과목명
+  mockDetail?: string; // 모의고사 쪽 실제 세부 과목명
 }
 
 export function buildRadarData(records: ScoreRecord[]): RadarPoint[] {
   const school = getLatestBySubject(records, "내신");
   const mock = getLatestBySubject(records, "모의고사");
-  // 내신/모의고사 탐구·선택과목 구성이 서로 다를 수 있으므로,
-  // 두 시험 모두에 존재하는 과목(예: 국어/수학/영어)만 비교 대상으로 삼는다.
+  // 카테고리 단위로 비교하므로, 내신 "공통수학1"과 모의고사 "수학"도 같은 "수학"으로 매칭된다.
   const subjects = Array.from(school.keys()).filter((subject) => mock.has(subject));
   return subjects.map((subject) => ({
     subject,
     내신: school.get(subject)?.Score ?? 0,
     모의고사: mock.get(subject)?.Score ?? 0,
+    schoolDetail: school.get(subject)?.Subject,
+    mockDetail: mock.get(subject)?.Subject,
   }));
 }
 
@@ -136,6 +188,7 @@ export interface TrendSubjectPoint {
   rankInfo?: string;
   percentile?: number;
   standardScore?: number;
+  subjectDetail?: string; // 실제 세부 과목명 (카테고리와 다를 때만 의미가 있음)
   delta: number | null; // 이전 회차 대비 원점수 변화량 (첫 회차는 null)
 }
 
@@ -144,24 +197,25 @@ export interface TrendPoint {
   subjects: Record<string, TrendSubjectPoint>;
 }
 
+// 과목 카테고리 단위로 선을 그린다. 회차마다 세부 과목명이 달라도(공통수학1 → 미적분1)
+// 같은 카테고리("수학")면 하나의 이어진 선으로 표시되고, 세부 과목명은 point에 남는다.
 export function buildTrendData(
   records: ScoreRecord[],
   category: "내신" | "모의고사"
 ): TrendPoint[] {
   const order = category === "내신" ? SCHOOL_PERIOD_ORDER : MOCK_PERIOD_ORDER;
   const filtered = records.filter((r) => r.Exam_Category === category);
-  const subjects = Array.from(new Set(filtered.map((r) => r.Subject)));
+  const byCategory = collapseByCategory(filtered);
+  const subjects = Array.from(byCategory.keys());
 
   const lastScoreBySubject = new Map<string, number>();
 
   return order
-    .filter((period) => filtered.some((r) => r.Exam_Period === period))
+    .filter((period) => Array.from(byCategory.values()).some((byPeriod) => byPeriod.has(period)))
     .map((period) => {
       const point: TrendPoint = { period, subjects: {} };
       for (const subject of subjects) {
-        const rec = filtered.find(
-          (r) => r.Exam_Period === period && r.Subject === subject
-        );
+        const rec = byCategory.get(subject)?.get(period);
         if (!rec) continue;
         const prevScore = lastScoreBySubject.get(subject);
         point.subjects[subject] = {
@@ -170,6 +224,7 @@ export function buildTrendData(
           rankInfo: rec.Rank_Info,
           percentile: rec.Percentile,
           standardScore: rec.Standard_Score,
+          subjectDetail: rec.Subject !== subject ? rec.Subject : undefined,
           delta: prevScore === undefined ? null : rec.Score - prevScore,
         };
         lastScoreBySubject.set(subject, rec.Score);

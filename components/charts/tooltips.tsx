@@ -46,6 +46,9 @@ export function TrendTooltip({
                 </span>
                 <span className="font-semibold">{detail.score}점</span>
               </div>
+              {detail.subjectDetail && (
+                <p className="text-[11px] text-muted-foreground">세부과목: {detail.subjectDetail}</p>
+              )}
               <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 text-muted-foreground">
                 <span>
                   {category === "내신"
@@ -67,7 +70,8 @@ export function TrendTooltip({
 // 레이더차트(내신 vs 모의고사 과목 비교) 커스텀 툴팁
 export function RadarTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
-  const subject = payload[0].payload.subject as string;
+  const point = payload[0].payload as { subject: string; schoolDetail?: string; mockDetail?: string };
+  const subject = point.subject;
   const school = payload.find((p) => p.name === "내신")?.value ?? 0;
   const mock = payload.find((p) => p.name === "모의고사")?.value ?? 0;
   const diff = school - mock;
@@ -76,11 +80,15 @@ export function RadarTooltip({ active, payload }: { active?: boolean; payload?: 
     <div className="min-w-[180px] rounded-lg border bg-popover p-3 text-xs shadow-lg">
       <p className="mb-2 text-sm font-semibold">{subject}</p>
       <div className="flex items-center justify-between">
-        <span className="text-muted-foreground">내신 원점수</span>
+        <span className="text-muted-foreground">
+          내신 원점수{point.schoolDetail && point.schoolDetail !== subject ? ` (${point.schoolDetail})` : ""}
+        </span>
         <span className="font-semibold">{school}점</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-muted-foreground">모의고사 원점수</span>
+        <span className="text-muted-foreground">
+          모의고사 원점수{point.mockDetail && point.mockDetail !== subject ? ` (${point.mockDetail})` : ""}
+        </span>
         <span className="font-semibold">{mock}점</span>
       </div>
       <div className="mt-1.5 border-t pt-1.5 text-muted-foreground">
